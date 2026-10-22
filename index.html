@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>David Cavender</title>
+  <meta name="description"
+    content="David Cavender, mathematics PhD candidate at UC San Diego. Optimization, mean field games and multi-agent control.">
+  <meta name="author" content="David Cavender">
+  <meta property="og:title" content="David Cavender">
+  <meta property="og:description"
+    content="Mathematics PhD candidate at UC San Diego. Optimization, mean field games and multi-agent control.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dbcav.github.io/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Chakra+Petch:wght@500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      /* The third colour. Swap this one value to recolour the whole page.
+         Some alternatives: teal #00a396, signal red #e4002b, Asiimov orange #ff5a1f */
+      --accent: #2a46ff;
+      --ink: #000;
+      --paper: #f4f5f7;
+      --card: #fff;
+      --muted: #4a4d55;
+      --chamfer: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font: 400 1.0625rem/1.55 "Barlow", system-ui, sans-serif;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ---------- background ---------- */
+    .bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .bg {
+      animation: fade .8s ease-out both;
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+      }
+    }
+
+    /* ---------- background controls ---------- */
+    .bg-ui {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 14px;
+    }
+
+    .bg-ui button {
+      padding: 7px 14px;
+      font: 500 .875rem/1.2 "Chakra Petch", "Barlow", sans-serif;
+      color: var(--ink);
+      background: var(--card);
+      border: 2px solid var(--ink);
+      cursor: pointer;
+    }
+
+    .bg-ui button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .bg-ui button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .bg-panel {
+      position: relative;
+      width: 220px;
+      padding: 18px 18px 16px;
+      background: var(--card);
+      border: 2px solid var(--ink);
+    }
+
+    .bg-panel[hidden] {
+      display: none;
+    }
+
+    .bg-panel::before {
+      content: "";
+      position: absolute;
+      left: -2px;
+      top: -12px;
+      width: 84px;
+      height: 8px;
+      background: var(--accent);
+      clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+
+    .ctl-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 0 0 8px;
+      font: 500 .9375rem/1.2 "Chakra Petch", "Barlow", sans-serif;
+    }
+
+    .ctl-label output {
+      font-weight: 600;
+    }
+
+    .pad {
+      position: relative;
+      width: 132px;
+      height: 132px;
+      margin: 0 auto;
+      background: var(--ink);
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      touch-action: none;
+      cursor: grab;
+      outline: none;
+    }
+
+    .pad::before {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      background: var(--paper);
+      clip-path: polygon(0 0, calc(100% - 13.2px) 0, 100% 13.2px, 100% 100%, 13.2px 100%, 0 calc(100% - 13.2px));
+    }
+
+    .pad:focus-visible {
+      background: var(--accent);
+    }
+
+    .pad.active {
+      cursor: grabbing;
+    }
+
+    .pad svg {
+      position: absolute;
+      inset: 0;
+    }
+
+    .pad .range {
+      fill: none;
+      stroke: var(--ink);
+      stroke-width: 1;
+      stroke-dasharray: 3 4;
+      opacity: .5;
+    }
+
+    .pad .vec {
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+
+    .knob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      background: var(--ink);
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+      pointer-events: none;
+    }
+
+    .pad.active .knob,
+    .pad:focus-visible .knob {
+      background: var(--accent);
+    }
+
+    .hint {
+      margin: 8px 0 18px;
+      font-size: .8125rem;
+      line-height: 1.4;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .bg-panel input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      width: 100%;
+      height: 24px;
+      margin: 0 0 16px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .bg-panel input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: var(--ink);
+    }
+
+    .bg-panel input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 22px;
+      margin-top: -9px;
+      background: var(--accent);
+      border: 2px solid var(--ink);
+    }
+
+    .bg-panel input[type="range"]::-moz-range-track {
+      height: 4px;
+      background: var(--ink);
+    }
+
+    .bg-panel input[type="range"]::-moz-range-thumb {
+      width: 10px;
+      height: 18px;
+      background: var(--accent);
+      border: 2px solid var(--ink);
+      border-radius: 0;
+    }
+
+    .bg-panel input[type="range"]:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+    }
+
+    .ctl-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ctl-buttons button {
+      flex: 1;
+    }
+
+    /* ---------- layout ---------- */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 72px 32px 88px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 470px) minmax(0, 560px);
+      gap: 48px;
+      align-items: start;
+      width: 100%;
+      max-width: 1078px;
+    }
+
+    .shell {
+      position: relative;
+      isolation: isolate;
+      width: 100%;
+    }
+
+    /* the projects card sits a step lower, so the pair reads as one staggered unit */
+    .shell-projects {
+      margin-top: 96px;
+    }
+
+    .shell.shell-projects::before {
+      left: auto;
+      right: 28px;
+    }
+
+    /* hatched offset shadow behind the card */
+    .shell::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translate(16px, 16px);
+      z-index: -1;
+      background: repeating-linear-gradient(45deg, var(--ink) 0 2px, transparent 2px 9px);
+      clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer),
+          100% 100%, var(--chamfer) 100%, 0 calc(100% - var(--chamfer)));
+    }
+
+    /* accent tab sitting on the card's top edge */
+    .shell::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: -14px;
+      width: 132px;
+      height: 10px;
+      background: var(--accent);
+      clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    }
+
+    /* 2px black outline that follows the chamfered corners */
+    .card {
+      background: var(--ink);
+      padding: 2px;
+      clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer),
+          100% 100%, var(--chamfer) 100%, 0 calc(100% - var(--chamfer)));
+    }
+
+    .card-inner {
+      --c: calc(var(--chamfer) - 0.8px);
+      background: var(--card);
+      padding: 44px 44px 40px;
+      clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c),
+          100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
+    }
+
+    /* ---------- type ---------- */
+    h1,
+    h2,
+    .p-title,
+    .links a {
+      font-family: "Chakra Petch", "Barlow", sans-serif;
+    }
+
+    h1 {
+      margin: 0;
+      font-weight: 600;
+      font-size: clamp(2.4rem, 1.6rem + 3vw, 3.3rem);
+      line-height: 1;
+      letter-spacing: -0.015em;
+    }
+
+    .intro {
+      margin: 16px 0 0;
+      max-width: 34em;
+      color: var(--muted);
+      font-size: 1.125rem;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* ---------- links row ---------- */
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 26px;
+      margin-top: 28px;
+    }
+
+    .links a {
+      font-weight: 500;
+      font-size: 1.0625rem;
+      text-decoration: underline;
+      text-decoration-color: var(--accent);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 6px;
+    }
+
+    .links a:hover {
+      color: var(--accent);
+    }
+
+
+    /* ---------- email box ---------- */
+    .link-btn {
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      color: inherit;
+      font: 500 1.0625rem/1.55 "Chakra Petch", "Barlow", sans-serif;
+      text-decoration: underline;
+      text-decoration-color: var(--accent);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 6px;
+    }
+
+    .link-btn:hover,
+    .link-btn[aria-expanded="true"] {
+      color: var(--accent);
+    }
+
+    .link-btn:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .email-box {
+      display: flex;
+      max-width: 340px;
+      margin-top: 18px;
+      border: 2px solid var(--ink);
+    }
+
+    .email-box[hidden] {
+      display: none;
+    }
+
+    .email-box input {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 12px;
+      border: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 400 1rem/1.3 "Barlow", system-ui, sans-serif;
+    }
+
+    .email-box input:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: -3px;
+    }
+
+    .email-box button {
+      min-width: 84px;
+      padding: 8px 14px;
+      border: 0;
+      border-left: 2px solid var(--ink);
+      background: var(--accent);
+      color: #fff;
+      font: 500 .9375rem/1.2 "Chakra Petch", "Barlow", sans-serif;
+      cursor: pointer;
+    }
+
+    .email-box button:hover {
+      background: var(--ink);
+    }
+
+    .email-box button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* ---------- projects ---------- */
+    h2 {
+      margin: 0 0 24px;
+      font-family: "Chakra Petch", "Barlow", sans-serif;
+      font-weight: 600;
+      font-size: clamp(1.6rem, 1.3rem + 1vw, 2rem);
+      line-height: 1.1;
+    }
+
+    .projects ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 28px;
+    }
+
+    .projects li {
+      padding-left: 18px;
+      border-left: 3px solid var(--ink);
+      transition: border-color .15s;
+    }
+
+    .projects li:hover,
+    .projects li:focus-within {
+      border-left-color: var(--accent);
+    }
+
+    h3 {
+      margin: 0;
+    }
+
+    /* project titles are the blue, underlined thing on the page: blue means link */
+    .p-title {
+      font-weight: 600;
+      font-size: 1.35rem;
+      line-height: 1.2;
+      color: var(--accent);
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 5px;
+    }
+
+    .p-title:hover {
+      color: var(--ink);
+      text-decoration-color: var(--accent);
+    }
+
+    .projects p {
+      margin: 10px 0 14px;
+      max-width: 36em;
+      color: var(--muted);
+    }
+
+    .p-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 14px;
+      font: 500 .9rem/1.2 "Chakra Petch", "Barlow", sans-serif;
+      color: var(--ink);
+      text-decoration: none;
+      border: 2px solid var(--ink);
+      background: var(--card);
+    }
+
+    .chip:hover {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .chip-main {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .chip-main:hover {
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+
+    /* ---------- small screens ---------- */
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: minmax(0, 600px);
+        justify-content: center;
+        gap: 40px;
+      }
+
+      .shell-projects {
+        margin-top: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        font-size: 1rem;
+      }
+
+      .page {
+        align-items: flex-start;
+        padding: clamp(150px, 30vh, 240px) 16px 48px;
+      }
+
+      .card-inner {
+        padding: 34px 24px 30px;
+      }
+
+      .shell::after {
+        transform: translate(8px, 8px);
+      }
+
+      .bg-ui {
+        position: absolute;
+        top: 16px;
+        bottom: auto;
+        flex-direction: column-reverse;
+      }
+    }
+
+    @media (min-width: 1600px) and (min-height: 860px) {
+      html {
+        font-size: 112.5%;
+      }
+
+      .layout {
+        grid-template-columns: minmax(0, 580px) minmax(0, 620px);
+        max-width: 1256px;
+        gap: 56px;
+      }
+
+      .card-inner {
+        padding: 52px 52px 46px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bg {
+        animation: none;
+      }
+
+      .projects li {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
+  <div class="bg-ui">
+    <div id="bg-panel" class="bg-panel" hidden>
+      <p class="ctl-label" id="dir-label">Direction</p>
+      <div id="pad" class="pad" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"
+        aria-labelledby="dir-label" aria-describedby="pad-hint" aria-valuetext="Heading down and right">
+        <svg viewBox="0 0 132 132" width="132" height="132" aria-hidden="true" focusable="false">
+          <polygon class="range"
+            points="126.0,90.9 90.9,126.0 41.1,126.0 6.0,90.9 6.0,41.1 41.1,6.0 90.9,6.0 126.0,41.1" />
+          <line id="vec" class="vec" x1="66" y1="66" x2="66" y2="66" />
+          <rect x="63" y="63" width="6" height="6" fill="currentColor" />
+        </svg>
+        <span id="knob" class="knob"></span>
+      </div>
+      <p class="hint" id="pad-hint">Drag the square, or use the arrow keys. The center stops it.</p>
+      <label class="ctl-label" for="speed">Speed</label>
+      <input id="speed" type="range" min="0" max="100" step="1" value="20">
+      <div class="ctl-buttons">
+        <button id="pause" type="button" aria-pressed="false">Pause</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+    </div>
+    <button id="bg-toggle" type="button" aria-expanded="false" aria-controls="bg-panel"
+      aria-label="Background controls">+</button>
+  </div>
+
+  <div class="page">
+    <div class="layout">
+      <div class="shell">
+        <header class="card">
+          <div class="card-inner">
+            <h1>David Cavender</h1>
+            <p class="intro">Mathematics PhD candidate at UC San Diego. I work on optimization, mean field games and
+              multi-agent control.</p>
+            <nav class="links" aria-label="Links">
+              <a href="https://github.com/dbcav" rel="noopener">GitHub</a>
+              <a href="https://www.linkedin.com/in/david-cavender/" rel="noopener">LinkedIn</a>
+              <button id="email-btn" class="link-btn" type="button" aria-expanded="false"
+                aria-controls="email-box">Email</button>
+            </nav>
+            <div id="email-box" class="email-box" hidden>
+              <label class="sr-only" for="email-field">Email address</label>
+              <input id="email-field" type="text" value="dcavende@ucsd.edu" readonly spellcheck="false">
+              <button id="email-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </header>
+      </div>
+
+      <div class="shell shell-projects">
+        <main class="card">
+          <section class="card-inner projects" aria-labelledby="projects-heading">
+            <h2 id="projects-heading">Projects</h2>
+            <ul>
+              <li>
+                <h3><a class="p-title" href="https://dbcav.github.io/voronoi_crowds/">Crowds on a Voronoi mesh</a></h3>
+                <p>An interactive page about mean field games.</p>
+                <div class="p-actions">
+                  <a class="chip chip-main" href="https://dbcav.github.io/voronoi_crowds/">Open project</a>
+                  <a class="chip" href="https://github.com/dbcav/voronoi_crowds" rel="noopener">Source code</a>
+                </div>
+              </li>
+              <li>
+                <h3><a class="p-title" href="https://dbcav.github.io/adjoint_backprop/">Adjoints and Backprop</a></h3>
+                <p>A short series of notebooks about adjoint methods, backpropagation, and why listing both of those is
+                  (somewhat)
+                  redundant.</p>
+                <div class="p-actions">
+                  <a class="chip chip-main" href="https://dbcav.github.io/adjoint_backprop/">Open project</a>
+                  <a class="chip" href="https://github.com/dbcav/adjoint_backprop" rel="noopener">Source code</a>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+  <script>
+    (() => {
+      const canvas = document.getElementById('bg');
+      const ctx = canvas.getContext('2d');
+      const shell = document.querySelector('.shell');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      const toggle = document.getElementById('bg-toggle');
+      const panel = document.getElementById('bg-panel');
+      const pad = document.getElementById('pad');
+      const knob = document.getElementById('knob');
+      const vec = document.getElementById('vec');
+      const speedIn = document.getElementById('speed');
+      const pauseBtn = document.getElementById('pause');
+      const resetBtn = document.getElementById('reset');
+
+      // Same seed = same layout. Add ?seed=123 to the URL to pin one you like.
+      const fromUrl = Number(new URLSearchParams(location.search).get('seed'));
+      const seed = Number.isFinite(fromUrl) && fromUrl > 0 ? fromUrl : Math.floor(Math.random() * 1e9);
+      console.info('Background seed: ' + seed + ' (add ?seed=' + seed + ' to the URL to keep this layout)');
+
+      function mulberry32(a) {
+        return function () {
+          a |= 0; a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const mod = (a, m) => ((a % m) + m) % m;
+      // Pattern tiles are 9, 12 and 16px; tile sizes are multiples of 144 so every loop is seamless.
+      const roundP = (v) => Math.max(144, Math.round(v / 144) * 144);
+
+      let W = 0, H = 0, dpr = 1, layers = [], C = {}, pats = {};
+
+      function readColors() {
+        const cs = getComputedStyle(document.documentElement);
+        const v = (n, d) => cs.getPropertyValue(n).trim() || d;
+        return { ink: v('--ink', '#000'), paper: v('--paper', '#f4f5f7'), accent: v('--accent', '#2a46ff') };
+      }
+
+      function makePattern(size, draw) {
+        const c = document.createElement('canvas');
+        c.width = c.height = Math.round(size * dpr);
+        const g = c.getContext('2d');
+        g.scale(dpr, dpr);
+        draw(g, size);
+        const p = ctx.createPattern(c, 'repeat');
+        p.setTransform(new DOMMatrix().scale(1 / dpr));
+        return p;
+      }
+
+      function hatch(color, alpha, width, s) {
+        return makePattern(s, (g) => {
+          g.strokeStyle = color; g.globalAlpha = alpha; g.lineWidth = width;
+          g.beginPath();
+          g.moveTo(0, s); g.lineTo(s, 0);
+          g.moveTo(-2, 2); g.lineTo(2, -2);
+          g.moveTo(s - 2, s + 2); g.lineTo(s + 2, s - 2);
+          g.stroke();
+        });
+      }
+
+      function buildPatterns() {
+        pats.hatch = hatch(C.ink, 1, 2.2, 9);
+        pats.hatchW = hatch(C.paper, 1, 2.2, 9);
+        pats.faint = hatch(C.ink, 0.09, 2, 12);
+        pats.dots = makePattern(16, (g) => { g.fillStyle = C.ink; g.globalAlpha = 0.5; g.fillRect(6, 6, 3.5, 3.5); });
+      }
+
+      // ---------- geometry helpers ----------
+      function item(pts, style) {
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const p of pts) {
+          if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0];
+          if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1];
+        }
+        const m = 10 + (style.lw || 0);
+        return Object.assign({ pts, minX: x0 - m, maxX: x1 + m, minY: y0 - m, maxY: y1 + m }, style);
+      }
+
+      // parallelogram leaning at 45°: top edge shifted right by its height
+      function lean(x, y, w, h) { return [[x + h, y], [x + w + h, y], [x + w, y + h], [x, y + h]]; }
+      // parallelogram leaning the other way, for long 45° bands
+      function band(x, y, w, h) { return [[x, y], [x + w, y], [x + w - h, y + h], [x - h, y + h]]; }
+      const box = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+
+      function chamferRect(x, y, w, h, c, corners) {
+        const p = [];
+        corners.tl ? p.push([x, y + c], [x + c, y]) : p.push([x, y]);
+        corners.tr ? p.push([x + w - c, y], [x + w, y + c]) : p.push([x + w, y]);
+        corners.br ? p.push([x + w, y + h - c], [x + w - c, y + h]) : p.push([x + w, y + h]);
+        corners.bl ? p.push([x + c, y + h], [x, y + h - c]) : p.push([x, y + h]);
+        return p;
+      }
+
+      // Offset a polyline that travels downwards. Positive d moves it left, negative d right.
+      // The first and last segments are vertical, so the ends are nudged 1px past the tile
+      // edge to hide any seam where neighbouring tiles meet.
+      function offsetPolyline(pts, d) {
+        const n = pts.length, segs = [];
+        for (let i = 0; i < n - 1; i++) {
+          const dx = pts[i + 1][0] - pts[i][0], dy = pts[i + 1][1] - pts[i][1];
+          const len = Math.hypot(dx, dy);
+          const tx = dx / len, ty = dy / len;
+          segs.push({ px: pts[i][0] - ty * d, py: pts[i][1] + tx * d, tx, ty });
+        }
+        const out = [[segs[0].px, segs[0].py - 1]];
+        for (let i = 1; i < segs.length; i++) {
+          const a = segs[i - 1], b = segs[i];
+          const den = a.tx * b.ty - a.ty * b.tx;
+          if (Math.abs(den) < 1e-9) { out.push([b.px, b.py]); continue; }
+          const s = ((b.px - a.px) * b.ty - (b.py - a.py) * b.tx) / den;
+          out.push([a.px + a.tx * s, a.py + a.ty * s]);
+        }
+        const last = segs[segs.length - 1];
+        const L = Math.hypot(pts[n - 1][0] - pts[n - 2][0], pts[n - 1][1] - pts[n - 2][1]);
+        out.push([last.px + last.tx * L, last.py + last.ty * L + 1]);
+        return out;
+      }
+
+      function verticalRuns(pts) {
+        const runs = [];
+        for (let i = 0; i < pts.length - 1; i++) {
+          if (Math.abs(pts[i][0] - pts[i + 1][0]) < 0.01 && pts[i + 1][1] - pts[i][1] > 1) runs.push([pts[i][0], pts[i][1], pts[i + 1][1]]);
+        }
+        return runs;
+      }
+
+      // A stepped edge: vertical runs joined by 45° jogs, repeating every P pixels down.
+      function genEdge(rng, base, amp, P, u) {
+        const r = (a, b) => a + rng() * (b - a);
+        for (let tries = 0; tries < 80; tries++) {
+          const k = 4 + Math.floor(rng() * 3);
+          const L = [0];
+          for (let i = 1; i < k; i++) {
+            let v, g = 0;
+            do { v = r(-amp, amp); g++; } while (Math.abs(v - L[i - 1]) < 0.4 * amp && g < 40);
+            L.push(v);
+          }
+          if (Math.abs(L[k - 1]) < 0.4 * amp) continue;
+          let diag = Math.abs(L[k - 1]);
+          for (let i = 1; i < k; i++) diag += Math.abs(L[i] - L[i - 1]);
+          const total = P - diag;
+          if (total < k * 160 * u) continue;
+          const w = L.map(() => 0.5 + rng());
+          const ws = w.reduce((a, b) => a + b, 0);
+          const runs = w.map((x) => total * x / ws);
+          const min0 = 160 * u;
+          if (runs[0] < min0) {
+            const rest = total - runs[0];
+            const scale = (total - min0) / rest;
+            for (let i = 1; i < k; i++) runs[i] *= scale;
+            runs[0] = min0;
+          }
+          const pts = [[base, 0]];
+          let y = runs[0] / 2;
+          pts.push([base, y]);
+          for (let i = 1; i < k; i++) {
+            y += Math.abs(L[i] - L[i - 1]); pts.push([base + L[i], y]);
+            y += runs[i]; pts.push([base + L[i], y]);
+          }
+          y += Math.abs(L[k - 1]); pts.push([base, y]);
+          pts.push([base, P]);
+          return pts;
+        }
+        return [[base, 0], [base, P]];
+      }
+
+      function finishLayer(items, Lx, Ly, speed) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const it of items) {
+          minX = Math.min(minX, it.minX); maxX = Math.max(maxX, it.maxX);
+          minY = Math.min(minY, it.minY); maxY = Math.max(maxY, it.maxY);
+        }
+        return { items, Lx, Ly, speed, minX, maxX, minY, maxY, ox: 0, oy: 0 };
+      }
+
+      // ---------- the three layers ----------
+      function build() {
+        W = window.innerWidth; H = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        C = readColors(); buildPatterns();
+
+        const rng = mulberry32(seed);
+        const r = (a, b) => a + rng() * (b - a);
+        const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+        const u = clamp(H / 1000, 0.75, 1.3);
+        const narrow = W < 700;
+
+        // ---- spine: a black band with stepped edges, drawn nearest ----
+        const Ls = roundP(Math.max(3 * H, 2400));
+        const Lxs = roundP(Math.max(1.6 * W, W + 1000 * u));
+        const ampL = Math.min(W * 0.07, 150 * u), ampR = Math.min(W * 0.05, 110 * u);
+        const xL = W * (narrow ? 0.6 : 0.74);
+        const xR = xL + clamp(r(0.34, 0.46) * W, 260 * u, 900 * u);
+        const left = genEdge(rng, xL, ampL, Ls, u);
+        const right = genEdge(rng, xR, ampR, Ls, u);
+
+        const spine = [];
+        const blackPoly = left.map((p) => [p[0], p[1]]);
+        blackPoly[0][1] = -1; blackPoly[blackPoly.length - 1][1] = Ls + 1;
+        const rightRev = right.map((p) => [p[0], p[1]]).reverse();
+        rightRev[0][1] = Ls + 1; rightRev[rightRev.length - 1][1] = -1;
+        spine.push(item(blackPoly.concat(rightRev), { fill: C.ink }));
+
+        // details inside the black
+        const in0 = xL + ampL + 46 * u, in1 = xR - ampR - 46 * u;
+        let cy = r(40, 200) * u, lastKind = '';
+        while (cy < Ls - 260 * u) {
+          let kind = pick(['frame', 'bars', 'hatch', 'frame', 'bars']);
+          if (kind === lastKind) kind = pick(['frame', 'bars', 'hatch'].filter((k) => k !== lastKind));
+          lastKind = kind;
+          if (kind === 'frame') {
+            const fw = Math.min(r(150, 230) * u, in1 - in0), fh = r(90, 140) * u;
+            if (fw > 110 * u) {
+              const fx = r(in0, in1 - fw);
+              spine.push(item(chamferRect(fx, cy, fw, fh, 30 * u, { tr: true, bl: true }), { stroke: C.paper, lw: 1.5, closed: true }));
+              spine.push(item(box(fx + 22 * u, cy + 20 * u, r(50, 90) * u, 10 * u), { fill: C.accent }));
+            }
+            cy += fh + r(120, 260) * u;
+          } else if (kind === 'bars') {
+            const n = 3 + Math.floor(rng() * 3), bw = 26 * u, gap = 10 * u, bh = 12 * u, total = n * (bw + gap);
+            if (in1 - in0 > total) {
+              const bx = r(in0, in1 - total);
+              for (let i = 0; i < n; i++) {
+                const x0 = bx + i * (bw + gap);
+                spine.push(item([[x0, cy + bh], [x0 + 8 * u, cy], [x0 + bw + 8 * u, cy], [x0 + bw, cy + bh]], { fill: C.accent }));
+              }
+            }
+            cy += bh + r(140, 300) * u;
+          } else {
+            const h = r(90, 150) * u, w = Math.min(r(80, 140) * u, in1 - in0 - h);
+            if (w > 30 * u) spine.push(item(lean(r(in0, in1 - w - h), cy, w, h), { fill: pats.hatchW }));
+            cy += h + r(100, 220) * u;
+          }
+        }
+
+        // left side: white inner line, blue stripe, three thin contours
+        spine.push(item(offsetPolyline(left, -30 * u), { stroke: C.paper, lw: 1.5 }));
+        spine.push(item(offsetPolyline(left, 36 * u), { stroke: C.accent, lw: 12 * u }));
+        spine.push(item(offsetPolyline(left, 70 * u), { stroke: C.ink, lw: 1.5 }));
+        spine.push(item(offsetPolyline(left, 80 * u), { stroke: C.ink, lw: 1.5 }));
+        const outerL = offsetPolyline(left, 92 * u);
+        spine.push(item(outerL, { stroke: C.ink, lw: 1.5 }));
+        // right side: white inner line, one heavy and two thin contours
+        spine.push(item(offsetPolyline(right, 30 * u), { stroke: C.paper, lw: 1.5 }));
+        spine.push(item(offsetPolyline(right, -24 * u), { stroke: C.ink, lw: 5 * u }));
+        spine.push(item(offsetPolyline(right, -44 * u), { stroke: C.ink, lw: 1.5 }));
+        const outerR = offsetPolyline(right, -54 * u);
+        spine.push(item(outerR, { stroke: C.ink, lw: 1.5 }));
+
+        // traces: leave an outer contour on a vertical run and step away at 45°
+        function traces(outer, dir) {
+          for (const run of verticalRuns(outer)) {
+            if (run[2] - run[1] < 120 * u) continue;
+            const count = rng() < 0.75 ? 1 : 2;
+            for (let c = 0; c < count; c++) {
+              const ty = r(run[1] + 40 * u, run[2] - 60 * u);
+              const x0 = run[0];
+              const bundle = rng() < 0.45 ? 2 : 1;
+              const a = r(60, 220) * u, jog = pick([-1, 1]) * r(24, 70) * u, b = r(80, 320) * u;
+              for (let m = 0; m < bundle; m++) {
+                // the second line of a bundle runs on the outside of the bend, 14px away
+                const y1 = ty - m * 14 * u * Math.sign(jog);
+                const x1 = x0 + dir * (a + m * 14 * u * (Math.SQRT2 - 1));
+                const x2 = x1 + dir * Math.abs(jog), y2 = y1 + jog;
+                const x3 = x2 + dir * b;
+                spine.push(item([[x0, y1], [x1, y1], [x2, y2], [x3, y2]], { stroke: C.ink, lw: 1.5 }));
+                if (m === bundle - 1) {
+                  if (rng() < 0.55) {
+                    const bx = Math.min(x2, x3) + r(0.15, 0.6) * b;
+                    spine.push(item(box(bx, y2 - 4 * u, 50 * u, 8 * u), { fill: C.accent }));
+                  } else {
+                    spine.push(item(box(x3 - 3 * u, y2 - 3 * u, 6 * u, 6 * u), { fill: C.ink }));
+                  }
+                }
+              }
+            }
+          }
+        }
+        traces(outerL, -1);
+        traces(outerR, 1);
+
+        // ---- tint: big grey planes, farthest back ----
+        const Lxt = roundP(1.3 * W + 400 * u), Lyt = roundP(2.2 * H);
+        const tint = [];
+        const nb = Math.max(1, Math.round(Lxt * Lyt / (1500 * 900 * u * u)));
+        for (let i = 0; i < nb; i++) tint.push(item(band(r(0, Lxt), r(0, Lyt), r(200, 320) * u, r(900, 1300) * u), { fill: C.ink, alpha: 0.045 }));
+        const tcw = 440 * u, tch = 400 * u;
+        for (let gy = 0; gy < Math.floor(Lyt / tch); gy++) {
+          for (let gx = 0; gx < Math.floor(Lxt / tcw); gx++) {
+            if (rng() > 0.5) continue;
+            const w = r(180, 420) * u, h = r(150, 380) * u;
+            const x = gx * tcw + r(-60, 60) * u, y = gy * tch + r(-60, 60) * u;
+            const c = r(40, 90) * u;
+            const corners = pick([{ br: true, bl: true }, { tr: true, bl: true }, { br: true }, { tl: true, br: true }]);
+            tint.push(item(chamferRect(x, y, w, h, c, corners), { fill: C.ink, alpha: pick([0.06, 0.07, 0.09]) }));
+            if (rng() < 0.4) {
+              const iw = w * r(0.3, 0.45), ih = h * r(0.4, 0.6);
+              tint.push(item(chamferRect(x + w - iw, y, iw, ih, c * 0.6, { br: true }), { fill: C.ink, alpha: 0.13 }));
+            }
+          }
+        }
+
+        // ---- texture: dots, hatch strips, double lines ----
+        const Lxx = roundP(1.45 * W + 300 * u), Lyx = roundP(2.5 * H);
+        const tex = [];
+        const xcw = 520 * u, xch = 300 * u;
+        for (let gy = 0; gy < Math.floor(Lyx / xch); gy++) {
+          for (let gx = 0; gx < Math.floor(Lxx / xcw); gx++) {
+            if (rng() > 0.45) continue;
+            const x = gx * xcw + r(-40, 120) * u, y = gy * xch + r(-30, 60) * u;
+            const kind = pick(['dots', 'hatch', 'lines', 'dots', 'hatch', 'faint']);
+            if (kind === 'dots') {
+              tex.push(item(lean(x, y, r(220, 400) * u, Math.round(r(4, 7)) * 16), { fill: pats.dots }));
+            } else if (kind === 'hatch') {
+              const h = r(16, 26) * u, w = r(100, 220) * u;
+              tex.push(item(lean(x, y, w, h), { fill: pats.hatch }));
+              if (rng() < 0.4) tex.push(item(box(x + w + h + 10 * u, y, 60 * u, 8 * u), { fill: C.accent }));
+            } else if (kind === 'faint') {
+              tex.push(item(band(x, y, r(120, 180) * u, r(200, 300) * u), { fill: pats.faint }));
+            } else {
+              const len = r(260, 700) * u, kick = r(30, 50) * u, tail = r(40, 160) * u;
+              for (let m = 0; m < 2; m++) {
+                const yy = y + m * 14 * u, xe = x + len + m * 6 * u;
+                tex.push(item([[x, yy], [xe, yy], [xe + kick, yy - kick], [xe + kick + tail, yy - kick]], { stroke: C.ink, lw: 1.5 }));
+              }
+            }
+          }
+        }
+
+        const old = layers;
+        layers = [
+          finishLayer(tint, Lxt, Lyt, 3),
+          finishLayer(tex, Lxx, Lyx, 6),
+          finishLayer(spine, Lxs, Ls, 9)
+        ];
+        // keep the camera where it was across a resize
+        layers.forEach((L, i) => { if (old[i]) { L.ox = mod(old[i].ox, L.Lx); L.oy = mod(old[i].oy, L.Ly); } });
+        lastKey = '';
+      }
+
+      // ---------- drawing ----------
+      function drawItem(it) {
+        const p = it.pts;
+        ctx.beginPath();
+        ctx.moveTo(p[0][0], p[0][1]);
+        for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+        ctx.globalAlpha = it.alpha == null ? 1 : it.alpha;
+        if (it.fill) { ctx.closePath(); ctx.fillStyle = it.fill; ctx.fill(); }
+        if (it.stroke) {
+          if (it.closed) ctx.closePath();
+          ctx.strokeStyle = it.stroke; ctx.lineWidth = it.lw; ctx.lineJoin = 'miter'; ctx.miterLimit = 10;
+          ctx.stroke();
+        }
+      }
+
+      // No pixel snapping: layers move by fractions of a pixel so slow drift glides instead of stepping.
+      const snap = (v) => v;
+      let lastKey = '';
+      function render() {
+        const offs = layers.map((L) => [snap(mod(L.ox, L.Lx)), snap(mod(L.oy, L.Ly))]);
+        const key = offs.join(';');
+        if (key === lastKey) return;
+        lastKey = key;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = C.paper;
+        ctx.fillRect(0, 0, W, H);
+        layers.forEach((L, n) => {
+          const [ox, oy] = offs[n];
+          const i0 = Math.floor((ox - L.maxX) / L.Lx), i1 = Math.ceil((ox + W - L.minX) / L.Lx);
+          const j0 = Math.floor((oy - L.maxY) / L.Ly), j1 = Math.ceil((oy + H - L.minY) / L.Ly);
+          for (let i = i0; i <= i1; i++) {
+            for (let j = j0; j <= j1; j++) {
+              const tx = i * L.Lx - ox, ty = j * L.Ly - oy;
+              if (L.maxX + tx < 0 || L.minX + tx > W || L.maxY + ty < 0 || L.minY + ty > H) continue;
+              ctx.save();
+              ctx.translate(tx, ty);
+              for (const it of L.items) {
+                if (it.maxX + tx < 0 || it.minX + tx > W || it.maxY + ty < 0 || it.minY + ty > H) continue;
+                drawItem(it);
+              }
+              ctx.restore();
+            }
+          }
+        });
+      }
+
+      // ---------- motion state ----------
+      const DEFAULTS = { speed: 4, dx: Math.SQRT1_2, dy: Math.SQRT1_2, paused: false };
+      let state = Object.assign({}, DEFAULTS, { paused: reduce.matches });
+      try {
+        const saved = JSON.parse(localStorage.getItem('bg-drift-split') || 'null');
+        if (saved && typeof saved === 'object') {
+          for (const k of Object.keys(DEFAULTS)) if (typeof saved[k] === typeof DEFAULTS[k]) state[k] = saved[k];
+        }
+      } catch (e) { }
+      // The slider is logarithmic: 0 stops, then MIN_SPEED× up to MAX_SPEED×.
+      const MIN_SPEED = 2, MAX_SPEED = 60;
+      const toSpeed = (v) => (v <= 0 ? 0 : MIN_SPEED * Math.pow(MAX_SPEED / MIN_SPEED, v / 100));
+      const toSlider = (sp) => (sp <= 0 ? 0 : clamp(Math.round(100 * Math.log(sp / MIN_SPEED) / Math.log(MAX_SPEED / MIN_SPEED)), 1, 100));
+      const fmtSpeed = (sp) => (sp === 0 ? '0×' : sp < 10 ? (Math.round(sp * 10) / 10) + '×' : Math.round(sp) + '×');
+      state.speed = state.speed > 0 ? clamp(state.speed, MIN_SPEED, MAX_SPEED) : 0;
+      const m0 = Math.hypot(state.dx, state.dy);
+      if (m0 > 1) { state.dx /= m0; state.dy /= m0; }
+
+      const vel = { x: 0, y: 0 };
+      function target() {
+        if (state.paused) return { x: 0, y: 0 };
+        return { x: state.dx * state.speed, y: state.dy * state.speed };
+      }
+      if (!state.paused) { const t = target(); vel.x = t.x; vel.y = t.y; }
+
+      let raf = 0, last = null;
+      function loop(now) {
+        const dt = last == null ? 0 : Math.min((now - last) / 1000, 0.1);
+        last = now;
+        const t = target();
+        const ease = 1 - Math.exp(-dt / 0.35);
+        vel.x += (t.x - vel.x) * ease;
+        vel.y += (t.y - vel.y) * ease;
+        for (const L of layers) {
+          L.ox = mod(L.ox + vel.x * L.speed * dt, L.Lx);
+          L.oy = mod(L.oy + vel.y * L.speed * dt, L.Ly);
+        }
+        render();
+        if (Math.hypot(t.x - vel.x, t.y - vel.y) < 0.02) { vel.x = t.x; vel.y = t.y; }
+        if (vel.x === 0 && vel.y === 0 && t.x === 0 && t.y === 0) { raf = 0; last = null; return; }
+        raf = requestAnimationFrame(loop);
+      }
+      function wake() { if (!raf) { last = null; raf = requestAnimationFrame(loop); } }
+
+      // ---------- controls ----------
+      const PAD = 132, KNOB = 22, R = (PAD - KNOB) / 2 - 6;
+
+      function save() { try { localStorage.setItem('bg-drift-split', JSON.stringify(state)); } catch (e) { } }
+
+      function describe() {
+        const m = Math.hypot(state.dx, state.dy);
+        if (m === 0) return 'Stopped';
+        const a = Math.atan2(-state.dy, state.dx) * 180 / Math.PI;
+        const names = ['right', 'up and right', 'up', 'up and left', 'left', 'down and left', 'down', 'down and right'];
+        return 'Heading ' + names[mod(Math.round(a / 45), 8)] + ' at ' + Math.round(m * 100) + '% strength';
+      }
+
+      function syncUI() {
+        const x = state.dx * R, y = state.dy * R;
+        knob.style.transform = 'translate(' + (x - KNOB / 2) + 'px,' + (y - KNOB / 2) + 'px)';
+        vec.setAttribute('x2', String(PAD / 2 + x));
+        vec.setAttribute('y2', String(PAD / 2 + y));
+        pad.setAttribute('aria-valuetext', describe());
+        pad.setAttribute('aria-valuenow', String(Math.round(Math.hypot(state.dx, state.dy) * 100)));
+        speedIn.value = String(toSlider(state.speed));
+        speedIn.setAttribute('aria-valuetext', fmtSpeed(state.speed));
+        pauseBtn.textContent = state.paused ? 'Play' : 'Pause';
+        pauseBtn.setAttribute('aria-pressed', String(state.paused));
+      }
+
+      function commit() { syncUI(); save(); wake(); }
+
+      function setDir(dx, dy) {
+        let m = Math.hypot(dx, dy);
+        if (m > 1) { dx /= m; dy /= m; m = 1; }
+        if (m < 0.08) { dx = 0; dy = 0; }
+        state.dx = dx; state.dy = dy;
+        state.paused = false;
+        commit();
+      }
+
+      let dragging = false;
+      function fromPointer(e) {
+        const rect = pad.getBoundingClientRect();
+        setDir((e.clientX - (rect.left + rect.width / 2)) / R, (e.clientY - (rect.top + rect.height / 2)) / R);
+      }
+      pad.addEventListener('pointerdown', (e) => { dragging = true; pad.setPointerCapture(e.pointerId); pad.classList.add('active'); fromPointer(e); });
+      pad.addEventListener('pointermove', (e) => { if (dragging) fromPointer(e); });
+      const endDrag = () => { dragging = false; pad.classList.remove('active'); };
+      pad.addEventListener('pointerup', endDrag);
+      pad.addEventListener('pointercancel', endDrag);
+
+      pad.addEventListener('keydown', (e) => {
+        const step = 0.1;
+        let { dx, dy } = state;
+        if (e.key === 'ArrowUp') dy -= step;
+        else if (e.key === 'ArrowDown') dy += step;
+        else if (e.key === 'ArrowLeft') dx -= step;
+        else if (e.key === 'ArrowRight') dx += step;
+        else if (e.key === ' ' || e.key === '0' || e.key === 'Home') { dx = 0; dy = 0; }
+        else return;
+        e.preventDefault();
+        setDir(dx, dy);
+      });
+
+      speedIn.addEventListener('input', () => {
+        state.speed = toSpeed(Number(speedIn.value));
+        if (state.speed > 0) state.paused = false;
+        commit();
+      });
+
+      pauseBtn.addEventListener('click', () => { state.paused = !state.paused; commit(); });
+      resetBtn.addEventListener('click', () => { state = Object.assign({}, DEFAULTS); commit(); });
+
+      toggle.addEventListener('click', () => {
+        const open = panel.hidden;
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.textContent = open ? '−' : '+';
+      });
+
+      reduce.addEventListener('change', () => { if (reduce.matches) { state.paused = true; commit(); } });
+
+      let lastW = 0, lastH = 0, timer = 0;
+      window.addEventListener('resize', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          // phones resize slightly as the address bar slides; only rebuild on real changes
+          if (window.innerWidth === lastW && Math.abs(window.innerHeight - lastH) < 150) return;
+          lastW = window.innerWidth; lastH = window.innerHeight;
+          build(); render();
+        }, 150);
+      });
+
+      function init() {
+        lastW = window.innerWidth; lastH = window.innerHeight;
+        build(); render(); syncUI(); wake();
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(init); else init();
+
+      // handy for testing from the console
+      window.bgDrift = { state: () => Object.assign({}, state), setDir, seed };
+    })();
+
+  </script>
+  <script>
+    (() => {
+      const btn = document.getElementById('email-btn');
+      const box = document.getElementById('email-box');
+      const field = document.getElementById('email-field');
+      const copy = document.getElementById('email-copy');
+      let timer = 0;
+      function setOpen(open) {
+        box.hidden = !open;
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) { field.focus(); field.select(); }
+      }
+      btn.addEventListener('click', () => setOpen(box.hidden));
+      field.addEventListener('focus', () => field.select());
+      copy.addEventListener('click', async () => {
+        let ok = false;
+        try { await navigator.clipboard.writeText(field.value); ok = true; }
+        catch (e) { field.select(); try { ok = document.execCommand('copy'); } catch (e2) { } }
+        copy.textContent = ok ? 'Copied' : 'Press Ctrl+C';
+        clearTimeout(timer);
+        timer = setTimeout(() => { copy.textContent = 'Copy'; }, 1800);
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { setOpen(false); btn.focus(); } });
+      document.addEventListener('click', (e) => { if (!box.hidden && !box.contains(e.target) && e.target !== btn) setOpen(false); });
+    })();
+  </script>
+</body>
+
+</html>
